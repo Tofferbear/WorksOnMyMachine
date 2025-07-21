@@ -12,7 +12,7 @@ Some of these projects were born from curiosity, others from necessity, and a fe
 - Possibly a rogue Spotify mining app or two
 
 ## 📦 Disclaimer
-Runs flawlessly on my machine. Mileage may vary.
+The finished stuff runs flawlessly on my machine. Your mileage may vary.  :P
 
 ## ☕ About Me
 Lead Software Engineer by day, system wrangler by night. Lover of backend elegance, edge-case sleuthing, and retro tech resurrection.
