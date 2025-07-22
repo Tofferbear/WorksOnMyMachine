@@ -1,0 +1,30 @@
+// discoveryHackshops.src - An app used for discovering hackshops and writing them to storage.
+// version = 1.0.4
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+obfuscationKey = null
+discoverCount = 10
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-k": "The encryption key to use for data files.",
+    "-c": "The number of hackshops to discover.",
+})
+
+if parsedParams.indexes.indexOf("-k") >= 0 then
+    obfuscationKey = parsedParams["-k"]
+end if
+
+if parsedParams.indexes.indexOf("-c") >= 0 then
+    discoverCount = parsedParams["-c"].to_int
+end if
+
+cog.ToffsoftUtils.Hackshop = Hackshop(obfuscationKey)
+
+if cog.ToffsoftUtils.Hackshop == null then
+    exit("Error loading Hackshop library.")
+end if
+
+cog.ToffsoftUtils.Hackshop.DiscoverHackshops(discoverCount)

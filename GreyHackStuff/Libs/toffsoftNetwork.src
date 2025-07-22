@@ -1,0 +1,153 @@
+// toffsoftNetwork.src - A library for network-related functions.
+
+import_code("toffsoftLibrary.src")
+import_code("toffsoftListUtility.src")
+import_code("toffsoftCommon.src")
+
+NETWORK = {}
+Network = function(obfuscationKey = null, autoStartMonitor = false)
+    self = new NETWORK
+    self.Common = Common(obfuscationKey)
+    self.CrackedWifiListUtility = ListUtility
+    self.Library = Library(obfuscationKey)
+    self.Crypto = self.Library.LoadCrypto
+    self.Shell = get_shell
+    self.Computer = self.Shell.host_computer
+    self.CrackedWifiDataFileName = "crackedWifi.csv"
+    self.CrackedWifiDataFileLocation = self.Common.DataFilePath + "/" + self.CrackedWifiDataFileName
+    self.LanName = "wlan0"
+    self.CurrentWifiNetwork = null
+    self.Version = "1.3.8"
+
+    if self.Crypto == null then return null
+   
+    self.StartWLanMonitor = function()
+        self.Crypto.airmon("start", self.LanName)
+    end function
+
+    self.LoadCrackedWifiDevices = function()
+        crackedWifiDataFile = self.Computer.File(self.CrackedWifiDataFileLocation)
+
+        if crackedWifiDataFile == null then return
+
+        self.CrackedWifiListUtility.LoadFromCsv(self.Common.UnobfuscateString(crackedWifiDataFile.get_content))
+
+        if self.CrackedWifiListUtility.DataList.len > 0 and self.CrackedWifiListUtility.DataList[0].indexOf("essid") != null then self.RemoveStaleWifiNetworks
+    end function
+
+    self.SaveCrackedWifiDevices = function()
+        crackedWifiDataFile = self.Computer.File(self.CrackedWifiDataFileLocation)
+
+        if crackedWifiDataFile == null then
+            fileTouchResponse = self.Computer.touch(self.Common.DataFilePath, self.CrackedWifiDataFileName)
+
+            if typeof(fileTouchResponse) == "string" and fileTouchResponse != "" then return
+
+            crackedWifiDataFile = self.Computer.File(self.CrackedWifiDataFileLocation)
+        end if
+
+        crackedWifiDataFile.set_content(self.Common.ObfuscateString(self.CrackedWifiListUtility.ConvertToCsv))
+    end function
+
+    self.RemoveStaleWifiNetworks = function()
+        for crackedWifiDevice in self.CrackedWifiListUtility.DataList
+            current = false
+        
+            for network in self.Computer.wifi_networks(self.LanName)
+                networkName = network.split(" ")[2]
+                current = crackedWifiDevice.essid == networkName
+
+                if current then break
+            end for
+
+            if not current then self.CrackedWifiListUtility.DataList.remove(self.CrackedWifiListUtility.DataList.indexOf(crackedWifiDevice))
+        end for
+    end function
+
+    self.WifiIsCracked = function(essid)
+        for crackedWifiDevice in self.CrackedWifiListUtility.DataList
+            if crackedWifiDevice.essid == essid then return true
+        end for
+
+        return false
+    end function
+
+    self.CrackNewWifiDevices = function()
+        devicesToCrack = []
+
+        for network in self.Computer.wifi_networks(self.LanName)
+            networkParts = network.split(" ")
+            bssid = networkParts[0]
+            power = networkParts[1][:-1].to_int
+            essid = networkParts[2]
+            acksNeeded = floor(300000 / power)
+        
+            if self.WifiIsCracked(essid) then continue
+
+            if power < 1 then continue
+           
+            devicesToCrack.push({
+                "bssid": bssid,
+                "power": power,
+                "essid": essid,
+                "acksNeeded": acksNeeded,
+            })
+        end for
+
+        devicesToCrack.sort("power")
+        devicesToCrack.reverse
+
+        for device in devicesToCrack
+            print("Cracking " + device.essid + ", " + device.acksNeeded + " acks.")
+            aireplayResult = self.Crypto.aireplay(device.bssid, device.essid, device.acksNeeded)
+
+            if aireplayResult != null then continue
+
+            crackedPassword = self.Crypto.aircrack(current_path + "/file.cap")
+
+            if crackedPassword == null or crackedPassword == "" then continue
+
+            self.CrackedWifiListUtility.DataList.push({
+                "power": device.power,
+                "essid": device.essid,
+                "bssid": device.bssid,
+                "password": crackedPassword,
+            })
+
+            captureFile = self.Computer.File(current_path + "/file.cap")
+
+            if captureFile != null then captureFile.delete
+
+            print(device.power + " " + device.essid + " " + crackedPassword)
+            self.SaveCrackedWifiDevices
+        end for
+    end function
+
+    self.GetRandomWifiNetwork = function()
+        self.LoadCrackedWifiDevices
+        return self.CrackedWifiListUtility.DataList[self.Common.GetRandomNumber(0, self.CrackedWifiListUtility.DataList.len - 1)]
+    end function
+
+    self.ConnectToRandomWifiNetwork = function()
+        randomNetwork = self.GetRandomWifiNetwork
+
+        if randomNetwork == null then return
+
+        while self.CrackedWifiListUtility.DataList.len > 1 and self.CurrentWifiNetwork != null and randomNetwork.essid == self.CurrentWifiNetwork.essid
+            randomNetwork = self.GetRandomWifiNetwork
+        end while
+
+        print("Connecting to " + randomNetwork.essid + "...")
+
+        self.CurrentWifiNetwork = randomNetwork
+        self.Computer.connect_wifi(self.LanName, randomNetwork.bssid, randomNetwork.essid, randomNetwork.password)
+    end function
+
+    self.LoadCrackedWifiDevices
+
+    if autoStartMonitor then
+        self.StartWLanMonitor
+    end if
+
+    return self
+end function

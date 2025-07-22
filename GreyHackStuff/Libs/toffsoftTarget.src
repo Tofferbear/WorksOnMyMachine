@@ -1,0 +1,512 @@
+// toffsoftTarget.src - A collection of functions for hacking a target network device.
+
+import_code("toffsoftHackshop.src")
+import_code("toffsoftLibrary.src")
+import_code("toffsoftExploit.src")
+import_code("toffsoftCommon.src")
+
+TARGET = {}
+Target = function(obfuscationKey = null, autoScanLocalLibs = false)
+    self = new TARGET
+    self.Shell = get_shell
+    self.Computer = self.Shell.host_computer
+    self.Common = Common(obfuscationKey)
+    self.Hackshop = Hackshop(obfuscationKey)
+    self.Exploit = Exploit(obfuscationKey)
+    self.Library = Library(obfuscationKey)
+    self.Metaxploit = self.Library.LoadMetaxploit()
+    self.TargetIp = ""
+    self.TargetRootPassword = ""
+    self.TargetAdminDetails = {}
+    self.HackableNetLibs = {}
+    self.HackableLocalLibs = {}
+    self.Version = "1.8.8"
+    self.LastTriggeredExploit = {
+        "Lib": "",
+        "Version": "",
+        "MemoryAddress": "",
+        "UnsafeString": "",
+    }
+    self.ServiceToLibraryMapping = {
+        "http": "libhttp.so",
+        "ftp": "libftp.so",
+        "ssh": "libssh.so",
+        "smtp": "libsmtp.so",
+        "students": "libsql.so",
+        "employees": "libsql.so",
+        "criminals": "libsql.so",
+        "rshell": "librshell.so",
+        "chat": "libchat.so",
+    }
+
+    self.GetAdminDetails = function()
+        if self.TargetIp == "" or not is_valid_ip(self.TargetIp) then return
+
+        adminInfo = whois(self.TargetIp)
+
+        if adminInfo and adminInfo.len > 0 then
+            infoLines = adminInfo.split(char(10))
+
+            if infoLines.len < 4 then return
+
+            self.TargetAdminDetails["Domain"] = infoLines[0].split(":")[1].trim
+            self.TargetAdminDetails["Contact"] = infoLines[1].split(":")[1].trim
+            self.TargetAdminDetails["Email"] = infoLines[2].split(":")[1].trim
+            self.TargetAdminDetails["Phone"] = infoLines[3].split(":")[1].trim
+        end if
+    end function
+
+    self.GetExploitsForLib = function(loadedLib)
+        if loadedLib == null or typeof(loadedLib) != "MetaLib" then
+            return []
+        end if
+
+        exploits = self.Exploit.GetExploitsForLibVersion(loadedLib.lib_name, loadedLib.version)
+
+        if exploits.len > 0 then
+            return exploits
+        end if
+
+        vulnerableAddresses = self.Metaxploit.scan(loadedLib)
+
+        if vulnerableAddresses.len > 0 then
+            for address in vulnerableAddresses
+                rawExploitsString = self.Metaxploit.scan_address(loadedLib, address)
+                unsafeString = ""
+
+                for exploit in rawExploitsString.split("Unsafe check: ")
+                    if exploit != "" and exploit.indexOf("decompiling source...") == null then
+                        unsafeStringStart = exploit.indexOf("<b>")
+                        unsafeStringEnd = exploit.indexOf("</b>")
+                        unsafeString = exploit[unsafeStringStart + 3:unsafeStringEnd]
+                        dependencies = []
+
+                        for line in exploit.split(char(10))
+                            trimmedLine = line.trim
+
+                            if trimmedLine == "" then
+                                continue
+                            end if
+
+                            if (trimmedLine.indexOf("* ") >= 0) then
+                                dependencies.push(trimmedLine)
+                            end if
+                        end for
+
+                        exploits.push({
+                            "Version": loadedLib.version,
+                            "MemoryAddress": address,
+                            "UnsafeString": unsafeString,
+                            "Dependencies": dependencies.join(", "),
+                            "Effect": "Unknown",
+                        })
+                    end if
+                end for
+            end for
+        end if
+
+        self.Exploit.StoreExploitsForLibVersion(loadedLib.lib_name, loadedLib.version, exploits)
+
+        return exploits
+    end function
+
+    self.GetHackableNetLibs = function()
+        if self.TargetIp == "" or not is_valid_ip(self.TargetIp) then
+            return
+        end if
+
+        router = get_router(self.TargetIp)
+        netSession = self.Metaxploit.net_use(self.TargetIp, 0)
+       
+        rules = router.firewall_rules
+        loadedLib = netSession.dump_lib
+
+        self.HackableNetLibs[0] = {
+            "Lib": loadedLib.lib_name,
+            "Version": loadedLib.version,
+            "LanIp": router.local_ip,
+            "Exploits": self.GetExploitsForLib(loadedLib),
+            "TargetNetSessionDetails": {
+                "GatewayConnections": netSession.get_num_conn_gateway,
+                "PortForwardCount": netSession.get_num_portforward,
+                "RegisteredUserCount": netSession.get_num_users,
+                "AnyActiveUser": netSession.is_any_active_user,
+                "RootActive": netSession.is_root_active_user,    
+            },
+        }
+
+        for port in router.used_ports
+            if not port.is_closed then
+                netSession = self.Metaxploit.net_use(self.TargetIp, port.port_number)
+
+                if not netSession then
+                    print("Failed to connect to " + self.TargetIp + ":" + port.port_number)
+                    continue
+                end if
+                    
+                loadedLib = netSession.dump_lib
+
+                self.HackableNetLibs[port.port_number] = {
+                    "Lib": loadedLib.lib_name,
+                    "Version": loadedLib.version,
+                    "LanIp": port.get_lan_ip,
+                    "Exploits": self.GetExploitsForLib(loadedLib),
+                    "TargetNetSessionDetails": {
+                        "GatewayConnections": netSession.get_num_conn_gateway,
+                        "PortForwardCount": netSession.get_num_portforward,
+                        "RegisteredUserCount": netSession.get_num_users,
+                        "AnyActiveUser": netSession.is_any_active_user,
+                        "RootActive": netSession.is_root_active_user,    
+                    },
+                }
+            end if
+        end for
+    end function
+
+    self.GetHackableLocalLibs = function()
+        localLibsFolder = self.Computer.File("/lib")
+
+        if localLibsFolder == null or not localLibsFolder.is_folder then
+            return
+        end if
+        
+        localLibs = localLibsFolder.get_files
+        localLibIndex = 0;
+
+        for lib in localLibs
+            loadedLib = self.Metaxploit.load(lib.path)
+            self.HackableLocalLibs[localLibIndex] = {
+                "Lib": loadedLib.lib_name,
+                "Version": loadedLib.version,
+                "Exploits": self.GetExploitsForLib(loadedLib),
+            }
+
+            localLibIndex = localLibIndex + 1
+        end for
+    end function
+
+    self.CheckForRootPassword = function()
+        if self.TargetIp == "" or not is_valid_ip(self.TargetIp) then
+            return
+        end if
+
+        decipheredPasswordFile = self.Computer.File(current_path + "/data/passDeciphered.txt")
+
+        if decipheredPasswordFile == null then
+            return
+        end if
+
+        passwordContent = self.Common.UnobfuscateString(decipheredPasswordFile.get_content)
+        passwordContentLines = passwordContent.split(char(10))
+
+        for line in passwordContentLines
+            if line == "" then
+                continue
+            end if
+
+            if line.indexOf(self.TargetIp + ";root") != null then
+                lineParts = line.split(";")
+                self.TargetRootPassword = lineParts[2]
+            end if
+        end for
+    end function
+
+    self.GetTargetInfoLine = function(netLibDetails = null)
+        activeUser = "X"
+
+        if netLibDetails == null then
+            if not self.HackableNetLibs.hasIndex(0) then
+                return "No target information found.  Running in local mode."
+            end if
+
+            netLibDetails = self.HackableNetLibs[0]
+        end if
+
+        if netLibDetails.TargetNetSessionDetails["AnyActiveUser"] then
+            activeUser = "N"
+        end if
+
+        if netLibDetails.TargetNetSessionDetails["RootActive"] then
+            activeUser = "R"
+        end if
+
+        return "Target Public Ip: " + self.TargetIp + " / A<sup>" + activeUser + "</sup> U<sup>" + netLibDetails.TargetNetSessionDetails["RegisteredUserCount"] + "</sup> P<sup>" + netLibDetails.TargetNetSessionDetails["PortForwardCount"] + "</sup> G<sup>" + netLibDetails.TargetNetSessionDetails["GatewayConnections"] + "</sup> / Root Password: " + self.TargetRootPassword
+    end function
+
+    self.SetTargetIp = function(targetIp)
+        self.TargetIp = targetIp
+        self.GetAdminDetails
+        self.GetHackableNetLibs
+        self.CheckForRootPassword
+    end function
+
+    self.DisplayAdminDetails = function()
+        if self.TargetAdminDetails == {} then
+            print("No admin details found.")
+            return
+        end if
+
+        print("Admin Details:")
+        print("    Domain : " + self.TargetAdminDetails["Domain"])
+        print("    Contact: " + self.TargetAdminDetails["Contact"])
+        print("    Email  : " + self.TargetAdminDetails["Email"])
+        print("    Phone  : " + self.TargetAdminDetails["Phone"])
+        print
+    end function
+
+    self.DisplayTargetIpAndPorts = function()
+        print("Target Public Ip: " + self.TargetIp)
+
+        for port in self.HackableNetLibs.indexes
+            libDetails = self.HackableNetLibs[port]
+            print("    " + libDetails["Lib"] + " / Port: " + port + " / Version: " + libDetails["Version"] + " / Lan IP: " + libDetails["LanIp"])
+        end for
+
+        print
+    end function
+
+    self.DisplayHackableNetLibs = function()
+        if self.HackableNetLibs == {} then
+            print("No hackable libraries found.")
+            return
+        end if
+
+        print("Hackable Net Libraries:")
+
+        for port in self.HackableNetLibs.indexes
+            libDetails = self.HackableNetLibs[port]
+            print("    " + libDetails["Lib"] + " / Port: " + port + " / Version: " + libDetails["Version"] + " / Lan IP: " + libDetails["LanIp"])
+
+            if libDetails["Exploits"].len > 0 then
+                print("        Exploits:")
+
+                for exploit in libDetails["Exploits"]
+                    print("            " + exploit.MemoryAddress + " / " + exploit.UnsafeString + " / " + exploit.Effect)
+
+                    if exploit.Dependencies != "" then
+                        print("                Dependencies:")
+
+                        for dependency in exploit.Dependencies.split(",")
+                            print("                    " + dependency)
+                        end for
+                    end if
+                end for
+            end if
+        end for
+
+        print
+    end function
+
+    self.DisplayHackableLocalLibs = function()
+        if self.HackableLocalLibs == {} then
+            print("No local hackable libraries found.")
+            return
+        end if
+
+        print("Hackable Local Libraries:")
+
+        for libIndex in self.HackableLocalLibs.indexes
+            libDetails = self.HackableLocalLibs[libIndex]
+            print("    " + libDetails["Lib"] + " / Version: " + libDetails["Version"])
+
+            if libDetails["Exploits"].len > 0 then
+                print("        Exploits:")
+
+                for exploit in libDetails["Exploits"]
+                    print("            " + exploit.MemoryAddress + " / " + exploit.UnsafeString + " / " + exploit.Effect)
+
+                    if exploit.Dependencies != "" then
+                        print("                Dependencies:")
+
+                        for dependency in exploit.Dependencies.split(",")
+                            print("                    " + dependency)
+                        end for
+                    end if
+                end for
+            end if
+        end for
+
+        print
+    end function
+
+    self.DisplayRootPassword = function()
+        if self.TargetRootPassword == "" then
+            print("No root password found.")
+            print
+            return
+        end if
+
+        print("Target Root Password: " + self.TargetRootPassword)
+        print
+    end function
+
+    self.DisplayRandomHackshop = function()
+        hackshop = self.Hackshop.PickRandomHackshop
+        print("Hackshop IP: " + hackshop.split(" ")[0])
+        print
+    end function
+
+    self.DisplayPublicInfo = function()
+        self.DisplayTargetIpAndPorts
+        self.DisplayAdminDetails
+        self.DisplayRandomHackshop
+    end function
+
+    self.GetNetMetaLibObject = function(ip, port)
+        // Connect to the server using metaxploit
+        net_session = self.Metaxploit.net_use(ip, port)
+
+        if not net_session then
+            print("Failed to connect to " + ip + ":" + port)
+            return
+        end if
+
+        // Send "dump_lib" command
+        libObj = net_session.dump_lib
+
+        // Assuming the response is in JSON format
+        if libObj == null then
+            print("Failed to obtain library object.")
+            return
+        end if
+
+        return libObj
+    end function
+
+    self.GetLocalMetaLibObject = function(libName)
+        // Load the library using metaxploit
+        libObj = self.Metaxploit.load("/lib/" + libName)
+
+        if not libObj then
+            print("Failed to load library.")
+            return
+        end if
+
+        return libObj
+    end function
+
+    if autoScanLocalLibs then
+        self.GetHackableLocalLibs
+    end if
+
+    if cog != null and cog.hasIndex("TargetCommands") then
+        cog.TargetCommands["settarget"] = function(instance, targetIp = "")
+            if (targetIp == "") then
+                targetIpResponse = user_input("Enter the target IP address: ")
+
+                if targetIpResponse == "" or not is_valid_ip(targetIpResponse) then
+                    print("Invalid target IP address.")
+                    return
+                end if
+
+                targetIp = targetIpResponse
+            end if
+
+            instance.SetTargetIp(targetIp)
+        end function
+
+        cog.TargetCommands["displaytargetinfo"] = function(instance)
+            instance.DisplayPublicInfo
+        end function
+
+        cog.TargetCommands["displaynetexploits"] = function(instance)
+            instance.DisplayHackableNetLibs
+        end function
+
+        cog.TargetCommands["displaylocalexploits"] = function(instance)
+            instance.DisplayHackableLocalLibs
+        end function
+
+        cog.TargetCommands["triggerexploit"] = function(instance)
+            exploitTypeResponse = instance.Common.RenderStaticMenuAndGetResponse(["Local Exploits", "Net Exploits"], null, "Choose the category of exploit you would like to trigger.")
+            print
+
+            hackableLibraries = []
+            libraryMenuItems = []
+
+            if exploitTypeResponse == "0" then
+                instance.DisplayHackableLocalLibs
+                for libIndex in instance.HackableLocalLibs.indexes
+                    libDetails = instance.HackableLocalLibs[libIndex]
+                    hackableLibraries.push(libDetails)
+                    libraryMenuItems.push(libDetails["Lib"] + " / " + libDetails["Version"])
+                end for
+            else if exploitTypeResponse == "1" then
+                for port in instance.HackableNetLibs.indexes
+                    libDetails = instance.HackableNetLibs[port]
+                    libDetails["Port"] = port
+                    hackableLibraries.push(libDetails)
+                    libraryMenuItems.push(libDetails["Lib"] + " / " + libDetails["Version"] + " / Port: " + port)
+                end for
+            end if
+
+            libraryResponse = instance.Common.RenderStaticMenuAndGetResponse(libraryMenuItems, null, "Choose the library you would like to exploit.")
+            print
+
+            libraryExploits = []
+            exploitMenuItems = []
+
+            for exploit in hackableLibraries[libraryResponse.to_int]["Exploits"]
+                libraryExploits.push(exploit)
+                exploitLine = exploit.MemoryAddress + " / " + exploit.UnsafeString + " / " + exploit.Effect + char(10)
+
+                if exploit.Dependencies != "" then
+                    exploitLine = exploitLine + "        Dependencies:" + char(10)
+
+                    for dependency in exploit.Dependencies.split(",")
+                        exploitLine = exploitLine + "            " + dependency + char(10)
+                    end for    
+                end if
+
+                exploitMenuItems.push(exploitLine)
+            end for
+
+            promptString = "Select exploit: "
+
+            if exploitTypeResponse == "1" then
+                promptString = instance.GetTargetInfoLine(hackableLibraries[libraryResponse.to_int]) + char(10) + "<size=80%><mspace=0.1><voffset=8><mark>" + char(1564)*2 + "</mark></size><voffset=0><s></mspace>  </s></color><space=0.3em><size=100%>" + promptString
+            end if
+
+            exploitResponse = instance.Common.RenderStaticMenuAndGetResponse(exploitMenuItems, promptString, "Choose the exploit you would like to trigger.")
+            print
+
+            libObj = null
+
+            if exploitTypeResponse == "0" then
+                libObj = instance.GetLocalMetaLibObject(hackableLibraries[libraryResponse.to_int].Lib)
+            else if exploitTypeResponse == "1" then
+                libObj = instance.GetNetMetaLibObject(instance.TargetIp, hackableLibraries[libraryResponse.to_int].Port)
+            end if
+
+            if libObj == null then
+                print("Failed to obtain library object.")
+                return
+            end if
+
+            optionalResponse = user_input("Optional parameter: ")
+            overflowResponse = libObj.overflow(libraryExploits[exploitResponse.to_int].MemoryAddress, libraryExploits[exploitResponse.to_int].UnsafeString, optionalResponse)
+
+            instance.LastTriggeredExploit.Lib = hackableLibraries[libraryResponse.to_int].Lib
+            instance.LastTriggeredExploit.Version = hackableLibraries[libraryResponse.to_int].Version
+            instance.LastTriggeredExploit.MemoryAddress = libraryExploits[exploitResponse.to_int].MemoryAddress
+            instance.LastTriggeredExploit.UnsafeString = libraryExploits[exploitResponse.to_int].UnsafeString
+
+            print("Last Triggered Exploit: " + instance.LastTriggeredExploit.Lib + " / " + instance.LastTriggeredExploit.Version + " / " + instance.LastTriggeredExploit.MemoryAddress + " / " + instance.LastTriggeredExploit.UnsafeString)
+            print
+
+            if overflowResponse != null then instance.Exploit.HandleOverflowResponse(overflowResponse)
+        end function
+
+        cog.TargetCommands["help"] = function()
+            print("Target Commands:")
+            print("    SetTarget            - Set the target IP address.")
+            print("    DisplayTargetInfo    - Display the target's public information.")
+            print("    DisplayNetExploits   - Display the target's hackable network libraries.")
+            print("    DisplayLocalExploits - Display the target's hackable local libraries.")
+            print("    TriggerExploit       - Trigger a local exploit or a net exploit on the target.")
+            print
+        end function
+    end if
+
+    return self
+end function

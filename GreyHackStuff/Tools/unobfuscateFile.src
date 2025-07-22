@@ -1,0 +1,58 @@
+// unobfuscateFile.src - A utility for unobfuscating files.
+// version = 1.0.6
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+obfuscationKey = null
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-f": "The file to unobfuscate.",
+    "-k": "The encryption key to use for data files.",
+})
+
+if parsedParams.indexes.indexOf("-f") < 0 then
+    exit("You must specify a file to unobfuscate.")
+end if
+
+if parsedParams.indexes.indexOf("-k") >= 0 then
+    obfuscationKey = parsedParams["-k"]
+end if
+
+cog.ToffsoftUtils.Encryption = Encryption(obfuscationKey)
+
+if cog.ToffsoftUtils.Encryption == null then
+    exit("Error loading Encryption library.")
+end if
+
+fullPathToFile = parsedParams["-f"]
+
+computer = get_shell.host_computer
+fileToUnobfuscate = computer.File(fullPathToFile)
+
+if fileToUnobfuscate == null then
+    print("File not found.")
+    return
+end if
+
+unobfuscatedString = cog.ToffsoftUtils.Encryption.UnobfuscateString(fileToUnobfuscate.get_content)
+
+if unobfuscatedString == "" then
+    print("Failed to obfuscate file.")
+    return
+end if
+
+print("Unobfuscated string:")
+print(unobfuscatedString)
+
+outputFileName = fullPathToFile + ".unobfuscated"
+outputFile = computer.File(outputFileName)
+
+if outputFile != null then
+    outputFile.delete
+end if
+
+computer.touch(fileToUnobfuscate.path.remove("/" + fileToUnobfuscate.name), fileToUnobfuscate.name + ".unobfuscated")
+outputFile = computer.File(outputFileName)
+outputFile.set_content(unobfuscatedString)

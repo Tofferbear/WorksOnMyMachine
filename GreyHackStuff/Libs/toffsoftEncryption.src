@@ -1,0 +1,141 @@
+// toffsoftEncryption.src - A collection of encryption functions used in toffsoft projects.
+
+ENCRYPTION = {}
+Encryption = function(obfuscationKey = null)
+    self = new ENCRYPTION
+    self.Common = Common(obfuscationKey)
+    self.Library = Library(obfuscationKey)
+    self.Crypto = self.Library.LoadCrypto
+    self.Shell = get_shell
+    self.Computer = self.Shell.host_computer
+    self.Version = "1.1.5"
+   
+    self.DecipherString = function(input)
+        return self.Crypto.decipher(input)
+    end function
+
+    self.DecipherFile = function(fileFullPath, ipAddress = "")
+        fileToDecipher = self.Computer.File(fileFullPath)
+
+        if fileToDecipher == null then
+            print(fileFullPath + " not found.")
+            return
+        end if
+
+        fileLines = self.Common.UnobfuscateString(fileToDecipher.get_content).split(char(10))
+        decipheredLines = []
+
+        if fileLines.len == 0 then
+            print(fileFullPath + " is empty.")
+            return
+        end if
+
+        for line in fileLines
+            if line == "" then continue
+
+            splitLine = line.split(":")
+            
+            if (splitLine.len != 2) then
+                print("Invalid line format in " + fileFullPath + ": " + line)
+                return
+            end if
+
+            password = self.DecipherString(splitLine[1])
+
+            decipheredLines.push({
+                "userName": splitLine[0],
+                "password": password,
+            })
+        end for
+
+        if ipAddress != "" and decipheredLines.len > 0 then
+            headerLine = "ipAddress;userName;password"
+            fileWithoutExtension = fileFullPath[fileFullPath.lastIndexOf("/") + 1:].remove(".txt")
+            outputFilePath = self.Common.DataFilePath + fileWithoutExtension + "Deciphered.txt"
+            outputFile = self.Computer.File(outputFilePath)
+
+            if outputFile then
+                previousContent = self.Common.UnobfuscateString(outputFile.get_content)
+                previousLines = previousContent.split(char(10))
+
+                ipAdded = false
+                userAdded = false
+                appendString = ""
+
+                for entry in decipheredLines
+                    for line in previousLines
+                        if line == "" then continue
+                
+                        splitLine = line.split(";")
+
+                        if splitLine.len != 3 then break 
+
+                        ipAdded = splitLine[0] == ipAddress
+                        userAdded = splitLine[1] == entry["userName"]
+                    end for
+
+                    if not ipAdded or not userAdded then appendString = appendString + ipAddress + ";" + entry["userName"] + ";" + entry["password"] + char(10)
+                end for
+
+                if appendString != "" then outputFile.set_content(self.Common.ObfuscateString(previousLines.join(char(10)) + appendString))
+            else
+                touchResult = self.Computer.touch(self.Common.DataFilePath, fileWithoutExtension + "Deciphered.txt")
+
+                if typeof(touchResult) == "string" then
+                    print("Error creating " + fileWithoutExtension + "Deciphered.txt: " + touchResult)
+                    return
+                end if
+
+                outputFile = self.Computer.File(outputFilePath)
+
+                if outputFile then
+                    outputString = ""
+
+                    for entry in decipheredLines
+                        outputString = outputString + ipAddress + ";" + entry["userName"] + ";" + entry["password"] + char(10)
+                    end for
+
+                    outputFile.set_content(self.Common.ObfuscateString(headerLine + char(10) + outputString))
+                end if
+            end if
+
+            fileToDecipher.delete
+        end if
+
+        for entry in decipheredLines
+            print("User: " + entry["userName"] + " / " + " Password: " + entry["password"])
+        end for
+        print
+    end function
+
+    if cog != null and cog.hasIndex("EncryptionCommands") then
+        cog.EncryptionCommands["decipherpassword"] = function(instance)
+            stringToDecipher = user_input("Enter the string to decipher: ")
+
+            if stringToDecipher == null or stringToDecipher == "" then
+                print("No string provided.")
+                return
+            end if
+
+            print("Deciphered string: " + instance.DecipherString(stringToDecipher))
+        end function
+
+        cog.EncryptionCommands["decipherpassfile"] = function(instance, ipAddress = "")
+            instance.DecipherFile(current_path + "/pass.txt", ipAddress)
+        end function
+
+        cog.EncryptionCommands["decipherbankfile"] = function(instance, ipAddress = "")
+            instance.DecipherFile(current_path + "/bank.txt", ipAddress)
+        end function
+
+        cog.EncryptionCommands["help"] = function()
+            print("Encryption Commands:")
+            print("    DecipherPassword    - Decipher an MD5 hash password.")
+            print("    DecipherPassFile    - Decipher a file named pass.txt containing username:password pairs.")
+            print("    DecipherBankFile    - Decipher a file named bank.txt containing username:password pairs.")
+            print
+        end function
+    end if
+    
+    return self
+end function

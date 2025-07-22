@@ -1,0 +1,42 @@
+// toffsoftUtils.src - A collection of all toffsoft libraries.
+
+import_code("toffsoftCommon.src")
+import_code("toffsoftEncryption.src")
+import_code("toffsoftHackshop.src")
+import_code("toffsoftLibrary.src")
+import_code("toffsoftNetwork.src")
+import_code("toffsoftListUtility.src")
+import_code("toffsoftFileUtility.src")
+import_code("toffsoftTarget.src")
+import_code("toffsoftExploit.src")
+
+TOFFSOFTUTILS = {}
+ToffsoftUtils = function(obfuscationKey = null)
+    self = new TOFFSOFTUTILS
+    self.Common = Common(obfuscationKey)
+    self.Hackshop = Hackshop(obfuscationKey)
+    self.Library = Library(obfuscationKey)
+    self.Network = Network(obfuscationKey)
+    self.ListUtility = ListUtility()
+    self.FileUtility = FileUtility()
+    self.Target = Target(obfuscationKey)
+    self.Exploit = Exploit(obfuscationKey)
+    self.Encryption = Encryption(obfuscationKey)
+    self.Version = "1.0.8"
+
+    self.DisplayVersions = function()
+        print("ToffsoftUtils       : " + self.Version)
+        print("ToffsoftCommon      : " + self.Common.Version)
+        print("ToffsoftHackshop    : " + self.Hackshop.Version)
+        print("ToffsoftLibrary     : " + self.Library.Version)
+        print("ToffsoftNetwork     : " + self.Network.Version)
+        print("ToffsoftListUtility : " + self.ListUtility.Version)
+        print("ToffsoftFileUtility : " + self.FileUtility.Version)
+        print("ToffsoftTarget      : " + self.Target.Version)
+        print("ToffsoftExploit     : " + self.Exploit.Version)
+        print("ToffsoftEncryption  : " + self.Encryption.Version)
+        print
+    end function
+
+    return self
+end function
