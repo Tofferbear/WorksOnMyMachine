@@ -1,0 +1,10 @@
+// getCurrentDate.src - An app used for getting the current date and time.
+// version: 1.0.8
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+
+print("Date: " + cog.ToffsoftUtils.Common.GetCurrentDate)
+print("Time: " + cog.ToffsoftUtils.Common.GetCurrentTime)

@@ -1,0 +1,40 @@
+// secureNetworkDevice.src - An app used for securing network devices.
+// version = 1.0.8
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+mode = null
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-m": "Mode to select which level to secure: [Limited] or [Full].",
+})
+
+if parsedParams.indexes.indexOf("-m") == null then
+    exit("You must specify the mode to secure the network device.")
+end if
+
+mode = parsedParams["-m"].lower
+
+if mode != "limited" and mode != "full" then
+    exit("Invalid mode specified. Must be [Limited] or [Full].")
+end if
+
+cog.ToffsoftUtils.FileUtility = FileUtility()
+
+cog.ToffsoftUtils.FileUtility.DeleteFile("/etc/passwd")
+cog.ToffsoftUtils.FileUtility.DeleteFile("/root/Config/Mail.txt")
+cog.ToffsoftUtils.FileUtility.DeleteFile("/root/Config/Bank.txt")
+cog.ToffsoftUtils.FileUtility.DeleteFile("/lib/kernel_module.so")
+
+if mode == "full" then
+    cog.ToffsoftUtils.FileUtility.DeleteEverythingInFolder("/home")
+    cog.ToffsoftUtils.FileUtility.LockdownFolder("/", true)
+else if mode == "limited" then
+    cog.ToffsoftUtils.FileUtility.DeleteCriticalFilesUnderHome
+    cog.ToffsoftUtils.FileUtility.DeleteFile("/home/guest")
+    cog.ToffsoftUtils.FileUtility.LockdownLimited
+end if
+
+cog.ToffsoftUtils.FileUtility.CorruptSystemLog

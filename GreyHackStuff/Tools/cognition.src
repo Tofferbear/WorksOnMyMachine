@@ -1,0 +1,94 @@
+// cognition.src - A hacking tool app for use by the Children of Glorzo.
+
+cog = get_custom_object
+cog.Version = "1.3.7"
+cog.TargetCommands = {}
+cog.HackshopCommands = {}
+cog.EncryptionCommands = {}
+cog.ExploitCommands = {}
+cog.LibraryCommands = {}
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog.ToffsoftUtils = ToffsoftUtils()
+
+obfuscationKey = null
+targetIp = ""
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-k": "The encryption key to use for data files.",
+    "-t": "The target IP address.",
+})
+
+if parsedParams.indexes.indexOf("-k") >= 0 then
+    obfuscationKey = parsedParams["-k"]
+end if
+
+if parsedParams.indexes.indexOf("-t") >= 0 then
+    targetIp = parsedParams["-t"]
+end if
+
+DisplaySplashScreen = function()
+    print("\n<align=""center"">Toffsoft Utilities</align>\n<align=""center""><size=50px>Cognition</size></align>\n<align=""center"">Children of Glorzo Hacking Utility</align>\n")
+end function
+
+cog.ToffsoftUtils.Target = Target(obfuscationKey, true)
+cog.ToffsoftUtils.Hackshop = Hackshop(obfuscationKey)
+cog.ToffsoftUtils.Encryption = Encryption(obfuscationKey)
+cog.ToffsoftUtils.Exploit = Exploit(obfuscationKey)
+cog.ToffsoftUtils.Library = Library(obfuscationKey)
+
+if targetIp != "" then
+    cog.TargetCommands["settarget"](cog.ToffsoftUtils.Target, targetIp)
+end if
+
+DisplaySplashScreen
+cog.TargetCommands["displaytargetinfo"](cog.ToffsoftUtils.Target)
+
+while true
+    print cog.ToffsoftUtils.Target.GetTargetInfoLine
+    userResponse = user_input("<size=80%><mspace=0.1><voffset=8><mark>" + char(1564)*2 + "</mark></size><voffset=0><s></mspace>  </s></color><space=0.3em><size=100%>" + "What would you like to do? ").lower
+
+    if userResponse == "quit" or userResponse == "exit" then
+        exit("Goodbye.")
+    else if userResponse == "version" then
+        print("Cognition           : " + cog.Version)
+        cog.ToffsoftUtils.DisplayVersions
+    else if userResponse == "help" or userResponse == "?" or userResponse == "-h" or userResponse == "--help" then
+        print("Global Commands:")
+        print("    Quit, Exit           - Exit the program.")
+        print("    Version              - Display the version information.")
+        print("    Help, ?, -h, --Help  - Displays help message for registered Target class commands.")
+        print
+        cog.TargetCommands["help"]
+        cog.HackshopCommands["help"]
+        cog.EncryptionCommands["help"]
+        cog.ExploitCommands["help"]
+        cog.LibraryCommands["help"]
+    else if cog.TargetCommands.hasIndex(userResponse) then
+        cog.TargetCommands[userResponse](cog.ToffsoftUtils.Target)
+    else if cog.HackshopCommands.hasIndex(userResponse) then
+        cog.HackshopCommands[userResponse](cog.ToffsoftUtils.Hackshop)
+    else if cog.EncryptionCommands.hasIndex(userResponse) then
+        if userResponse == "decipherpassfile" then
+            cog.EncryptionCommands[userResponse](cog.ToffsoftUtils.Encryption, cog.ToffsoftUtils.Target.TargetIp)
+            cog.ToffsoftUtils.Target.CheckForRootPassword
+        else if userResponse == "decipherbankfile" then
+            cog.EncryptionCommands[userResponse](cog.ToffsoftUtils.Encryption, cog.ToffsoftUtils.Target.TargetIp)
+        else
+            cog.EncryptionCommands[userResponse](cog.ToffsoftUtils.Encryption)
+        end if
+    else if cog.ExploitCommands.hasIndex(userResponse) then
+        if userResponse == "setexploiteffect" then
+            cog.ExploitCommands[userResponse](cog.ToffsoftUtils.Exploit)
+            cog.ToffsoftUtils.Target.GetHackableNetLibs
+            cog.ToffsoftUtils.Target.GetHackableLocalLibs
+        else
+            cog.ExploitCommands[userResponse](cog.ToffsoftUtils.Exploit)
+        end if
+    else if cog.LibraryCommands.hasIndex(userResponse) then
+        cog.LibraryCommands[userResponse](cog.ToffsoftUtils.Library)
+    else
+        print("Invalid command.")
+    end if
+end while

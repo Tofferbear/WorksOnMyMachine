@@ -1,0 +1,10 @@
+print "<size=120%><mspace=0.1> <mark=#ffffff>"+char(1564)+"</mark></size><mspace=-0.1>"+char(1564)+"</mspace></mspace> "
+print
+print "<size=120%><mspace=0.1> <mark=#ffffff>"+char(1564)+"</mark></size><#fff><s></mspace>  </s></color><space=0.3em><size=100%>"
+print
+print "<size=80%><mspace=0.1><voffset=8><mark>"+char(1564)*2+"</mark></size><voffset=0><s></mspace>  </s></color><space=0.3em><size=100%>"+"Someother random thing"
+print
+print 
+// for i in range(0, 20000)
+//     print("Code: " + i + " / Char: " + char(i))
+// end for
