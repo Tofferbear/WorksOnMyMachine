@@ -16,3 +16,19 @@ To run it locally:
 2) have the dotnet cli installed
 3) start by typing "func start"
 4) in the output there will be a URL to click in order to get the auth token
+
+## You'll need
+- A Spotify Developer API key
+- Your user ID and authorization token
+
+## 📦 Dependencies
+- .NET 6 or later
+- Spotify Web API NuGet package (or your preferred wrapper)
+
+## 💡 Use Cases
+- Building a “recently played” visualizer
+- Feeding your personal data monster
+- Proving you did listen to that obscure jazz fusion playlist
+
+## ☕ About the Dev
+Made by a lead software engineer who enjoys algorithmic puzzles, backend elegance, and nostalgic audio visualizers. Also known to debug cars and cloud systems with equal zeal.

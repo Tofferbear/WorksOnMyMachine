@@ -1,0 +1,14 @@
+div {
+    -ms-overflow-style: none;
+    -ms-overflow-x: scroll;
+    -ms-overflow-y: scroll;
+    margin: 0;
+    overflow: hidden;
+    overflow-x: scroll;
+    overflow-y: scroll;
+    padding: 0;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
