@@ -1,0 +1,121 @@
+// toffsoftHackshop.src - A collection of hackshop related functions.
+
+import_code("toffsoftCommon.src")
+
+HACKSHOP = {}
+Hackshop = function(obfuscationKey = null)
+    self = new HACKSHOP
+    self.Shell = get_shell
+    self.Computer = self.Shell.host_computer
+    self.Common = Common(obfuscationKey)
+    self.HackshopsDataFileName = "hackshops.txt"
+    self.HackshopsDataFileFullPath = self.Common.DataFilePath + "/" + self.HackshopsDataFileName
+    self.Version = "1.2.3"
+
+    self.PickRandomHackshop = function()
+        hackshopsDataFile = self.Computer.File(self.HackshopsDataFileFullPath)
+
+        if hackshopsDataFile == null then return ""
+
+        hackshopLines = self.Common.UnobfuscateString(hackshopsDataFile.get_content).split(char(10))
+
+        if hackshopLines == null or hackshopLines.len == 0 then return ""
+
+        randomHackshop = hackshopLines[self.Common.GetRandomNumber(1, hackshopLines.len - 1)]
+
+        return randomHackshop
+    end function
+
+    self.DiscoverHackshops = function(discoverCount = 10)
+        iterationCount = 0
+
+        while iterationCount < discoverCount
+            randomRouter = null
+
+            while true
+                randomIp = self.Common.GetRandomIp
+                randomRouter = get_router(randomIp)
+
+                if randomRouter == null or is_lan_ip(randomIp) or not self.Shell.ping(randomIp) then continue
+
+                break
+            end while
+
+            routerPorts=[]
+
+            for port in randomRouter.used_ports
+                networkDevice = [port.port_number]
+                networkDevice = networkDevice + randomRouter.port_info(port).split(" ")
+                routerPorts.push(networkDevice)
+            end for
+
+            for port in routerPorts
+                print("Checking " + randomIp + " " + port.join(" ") + "...")
+
+                if port[1] == "repository" then
+                    aptClient = self.Common.LoadAptClient()
+                    addRepoResponse = aptClient.add_repo(randomIp, port[0])
+
+                    if addRepoResponse != "" then return null
+        
+                    updateResponse = aptClient.update()
+
+                    if updateResponse != "" then return null
+        
+                    packages = aptClient.show(randomIp)
+                    packageList = packages.split(char(10) + char(10))
+                    hackshopFound = false
+
+                    for package in packageList
+                        hackshopFound = package.indexOf("AdminMonitor.exe") != null
+
+                        if hackshopFound then break
+                    end for
+
+                    delRepoResponse = aptClient.del_repo(randomIp)
+
+                    if delRepoResponse != "" then return null
+        
+                    updateResponse = aptClient.update()
+
+                    if updateResponse != "" then return null
+        
+                    if hackshopFound then
+                        print(randomIp + " " + port[1] + " " + port[-1] + " --> " + self.HackshopsDataFileFullPath)
+        
+                        hackshopsDataFile = self.Computer.File(self.HackshopsDataFileFullPath)
+
+                        if not hackshopsDataFile then
+                            self.Computer.touch(self.Common.DataFilePath, self.HackshopsDataFileName)
+                            hackshopsDataFile = self.Computer.File(self.HackshopsDataFileFullPath)
+                        end if
+
+                        hackshopsData = self.Common.UnobfuscateString(hackshopsDataFile.get_content).split(char(10))
+        
+                        while hackshopsData.indexOf("") != null
+                            hackshopsData.remove(hackshopsData.indexOf(""))
+                        end while
+        
+                        hackshopsData.push(randomIp + " " + port[1] + "#" + port[-1])
+                        hackshopsDataFile.set_content(self.Common.ObfuscateString(hackshopsData.join(char(10))))
+                        iterationCount = iterationCount + 1
+                    end if
+                end if        
+            end for
+        end while
+    end function
+
+    if cog != null and cog.hasIndex("HackshopCommands") then
+        cog.HackshopCommands["discoverhackshops"] = function(instance)
+            instance.DiscoverHackshops
+        end function
+
+        cog.HackshopCommands["help"] = function()
+            print("Hackshop Commands:")
+            print("    DiscoverHackshops    - Discover hackshops on the network.")
+            print
+        end function
+    end if
+
+    return self
+end function

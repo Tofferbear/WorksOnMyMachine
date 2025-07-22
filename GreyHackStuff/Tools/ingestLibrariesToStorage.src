@@ -1,0 +1,35 @@
+// ingestLibrariesToStorage.src - An app used for ingesting libraries to storage.
+// version: 1.0.6
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+obfuscationKey = null
+sourceFolder = ""
+destinationFolder = ""
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-k": "The encryption key to use for data files.",
+    "-l": "The folder with libraries to ingest.",
+    "-s": "The storage folder to ingest the libraries to.",
+})
+
+if parsedParams.indexes.indexOf("-k") >= 0 then
+    obfuscationKey = parsedParams["-k"]
+end if
+
+if parsedParams.indexes.indexOf("-l") >= 0 then
+    sourceFolder = parsedParams["-l"]
+end if
+
+if parsedParams.indexes.indexOf("-s") >= 0 then
+    destinationFolder = parsedParams["-s"]
+end if
+
+if sourceFolder == "" or destinationFolder == "" then
+    exit("You must specify both the source and destination directories.")
+end if
+
+cog.ToffsoftUtils.FileUtility = FileUtility(obfuscationKey)
+cog.ToffsoftUtils.FileUtility.IngestLibrariesToStorage(sourceFolder, destinationFolder)

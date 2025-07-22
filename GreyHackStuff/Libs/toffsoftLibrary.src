@@ -1,0 +1,90 @@
+// toffsoftLibrary.src - A collection of library related functions.
+
+import_code("toffsoftHackshop.src")
+import_code("toffsoftCommon.src")
+
+LIBRARY = {}
+Library = function(obfuscationKey = null)
+    self = new LIBRARY
+    self.Shell = get_shell
+    self.Common = Common(obfuscationKey)
+    self.Hackshop = Hackshop(obfuscationKey)
+    self.CryptoLibFullPath = current_path + "/crypto.so"
+    self.MetaxploitLibFullPath = current_path + "/metaxploit.so"
+    self.Version = "1.2.0"
+
+    self.DownloadFromRandomHackshop = function(fileName)
+        randomHackshop = self.Hackshop.PickRandomHackshop
+
+        if randomHackshop == "" then return false
+
+        hackshopIP = randomHackshop.split(" ")[0]
+
+        if not self.Shell.ping(hackshopIP) then return false
+
+        aptClient = self.Common.LoadAptClient()
+
+        if aptClient == null then return false
+
+        addRepoResponse = aptClient.add_repo(hackshopIP)
+
+        if addRepoResponse != "" then return false
+
+        updateResponse = aptClient.update()
+
+        if updateResponse != "" then return false
+
+        innstallResponse = aptClient.install(fileName, current_path)
+
+        if typeof(innstallResponse) != "number" and innstallResponse != "" then return false
+
+        delRepoResponse = aptClient.del_repo(hackshopIP)
+
+        if delRepoResponse != "" then return false
+
+        updateResponse = aptClient.update()
+
+        if updateResponse != "" then return false
+
+        return true
+    end function
+    
+    self.LoadCrypto = function()
+        cryptoLib = include_lib(self.CryptoLibFullPath)
+
+        if cryptoLib == null then
+            if self.DownloadFromRandomHackshop("crypto.so") then cryptoLib = include_lib(self.CryptoLibFullPath)
+
+            if cryptoLib == null then return null
+        end if
+
+        return cryptoLib
+    end function
+
+    self.LoadMetaxploit = function()
+        metaxploitLib = include_lib(self.MetaxploitLibFullPath)
+
+        if metaxploitLib == null then
+            if self.DownloadFromRandomHackshop("metaxploit.so") then metaxploitLib = include_lib(self.MetaxploitLibFullPath)
+
+            if metaxploitLib == null then return null
+        end if
+
+        return metaxploitLib
+    end function
+
+    if cog != null and cog.hasIndex("LibraryCommands") then
+        cog.LibraryCommands["refreshhackshoplibs"] = function(instance)
+            instance.DownloadFromRandomHackshop("crypto.so")
+            instance.DownloadFromRandomHackshop("metaxploit.so")
+        end function
+
+        cog.LibraryCommands["help"] = function()
+            print("Library Commands:")
+            print("    RefreshHackshopLibs    - Refresh the crypto and metaxploit libraries.")
+            print
+        end function
+    end if
+
+    return self
+end function

@@ -1,0 +1,171 @@
+// toffsoftFileUtility.src - A collection of file utility functions used in toffsoft projects.
+
+import_code("toffsoftLibrary.src")
+
+FILEUTILITY = {}
+FileUtility = function(obfuscationKey = null)
+    self = new FILEUTILITY
+    self.Library = Library(obfuscationKey)
+    self.Shell = get_shell
+    self.Computer = self.Shell.host_computer
+    self.Metaxploit = self.Library.LoadMetaxploit()
+    self.Version = "1.2.7"
+
+    self.IngestLibrariesToStorage = function(librariesPath, storagePath)
+        libFolderObj = self.Computer.File(librariesPath)
+
+        if libFolderObj == null or not libFolderObj.is_folder then return
+        
+        storageFolderObj = self.Computer.File(storagePath)
+
+        if storageFolderObj == null then
+            self.Computer.create_folder(storagePath[:storagePath.lastIndexOf("/")], storagePath[storagePath.lastIndexOf("/") + 1:])
+            storageFolderObj = self.Computer.File(storagePath)
+        end if
+
+        for library in libFolderObj.get_files
+            if library.name.indexOf(".so") >= 0 then
+                baseLibName = library.name.replace(".so", "")
+
+                if not storageFolderObj.get_folders.indexOf(baseLibName) then self.Computer.create_folder(storagePath, baseLibName)
+    
+                libObj = self.Metaxploit.load(library.path)
+                libFolderPath = storageFolderObj.path + "/" + baseLibName + "/"
+                libVersionFolderPath = libFolderPath + libObj.version + "/"
+                self.Computer.create_folder(libFolderPath, libObj.version)
+                moveResult = library.move(libVersionFolderPath, library.name)
+
+                if typeof(moveResult) == "string" and moveResult != "" then
+                    print("Error moving " + library.path + " to " + libVersionFolderPath + " :")
+                    print("    " + moveResult)
+                end if
+            end if
+        end for
+    end function
+
+    self.DeleteFile = function(fileFullPath)
+        self.Computer.File(fileFullPath).delete
+    end function
+
+    self.DeleteCriticalFilesUnderHome = function()
+        for folder in self.Computer.File("/home").get_folders
+            self.DeleteFile(folder.path + "/Config/Mail.txt")
+            self.DeleteFile(folder.path + "/Config/Bank.txt")
+        end for
+    end function
+
+    self.DeleteEverythingInFolder = function(folderFullPath)
+        folderObj = self.Computer.File(folderFullPath)
+
+        for file in folderObj.get_files
+            self.DeleteFile(file.path)
+        end for
+
+        for folder in folderObj.get_folders
+            self.DeleteFile(folder.path)
+        end for
+    end function
+
+    self.LockdownFolder = function(folderFullPath, recursive = false)
+        folderObj = self.Computer.File(folderFullPath)
+        folderObj.chmod("u-rwx", recursive)
+        folderObj.chmod("g-rwx", recursive)
+        folderObj.chmod("o-rwx", recursive)
+        print("Secured " + folderObj.path)
+    end function
+
+    self.LockdownLimited = function()
+        for folder in self.Computer.File("/").get_folders
+            if folder.path != "/bin" and folder.path != "/usr/bin" then
+                folder.chmod("u-rwx", true)
+                folder.chmod("g-rwx", true)
+                folder.chmod("o-rwx", true)
+            end if
+        end for
+        
+        for file in self.Computer.File("/bin").get_files
+            if file.name == "sudo" then
+                file.chmod("u-rwx", true)
+                file.chmod("g-rw", true)
+                file.chmod("o-rwx", true)
+                file.chmod("g+x", true)
+            else
+                file.chmod("u-rwx", true)
+                file.chmod("g-rwx", true)
+                file.chmod("o-rwx", true)
+            end if
+    
+            print("Secured " + file.path)
+        end for
+            
+        for folder in self.Computer.File("/usr").get_folders
+            if folder.name == "bin" then
+                for file in folder.get_files
+                    if file.name == "Terminal.exe" then
+                        file.chmod("u-rwx", true)
+                        file.chmod("g-rw", true)
+                        file.chmod("o-rwx", true)
+                        file.chmod("g+x", true)
+                    else
+                        file.chmod("u-rwx", true)
+                        file.chmod("g-rwx", true)
+                        file.chmod("o-rwx", true)
+                    end if
+    
+                    print("Secured " + file.path)
+                end for
+            else
+                folder.chmod("u-rwx", true)
+                folder.chmod("g-rwx", true)
+                folder.chmod("o-rwx", true)
+    
+                print("Secured " + folder.path)
+            end if
+        end for
+    end function
+
+    self.CorruptSystemLog = function()
+        self.Computer.touch(current_path, "system.log")
+        self.Computer.File(current_path + "/system.log").move("/var", "system.log")
+    end function
+
+    self.GetUser = function(fileObj)
+        while fileObj.path != "/"
+            fileObj = fileObj.parent
+        end while
+
+        if fileObj.has_permission("w") then return "root"
+
+        for folder in fileObj.get_folders
+            if folder.name == "home" then
+                for userDir in folder.get_folders
+                    if userDir.has_permission("w") and userDir.name != "guest" then return "non-root user"
+                end for
+            end if
+        end for
+
+        return "guest"
+    end function
+
+    self.GetFoldersRecursive = function(startingFolderObj)
+        if not startingFolderObj.is_folder then return []
+
+        folders = startingFolderObj.get_folders
+
+        for folder in folders
+            for subSubFolder in self.GetFoldersRecursive(folder)
+                folders.push(subSubFolder)
+            end for
+        end for
+
+        return folders
+    end function
+
+    self.RemoveAllFilesInFolder = function(folderFullPath)
+        for file in self.Computer.File(folderFullPath).get_files
+            self.DeleteFile(file.path)
+        end for
+    end function
+
+    return self
+end function

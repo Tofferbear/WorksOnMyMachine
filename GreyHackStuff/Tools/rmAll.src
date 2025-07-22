@@ -1,0 +1,21 @@
+// rmAll.src - an app for removing all files in a given folder (not recursive)
+
+cog = get_custom_object
+cog.Version = "1.0.1"
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog.ToffsoftUtils = ToffsoftUtils()
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-p": "The full path to the folder containing the files to remove.",
+})
+
+if parsedParams.indexes.indexOf("-p") < 0 then
+    exit("You must specify a path to a folder.")
+end if
+
+folderPath = parsedParams["-p"]
+
+cog.ToffsoftUtils.FileUtility = FileUtility()
+cog.ToffsoftUtils.FileUtility.RemoveAllFilesInFolder(folderPath)

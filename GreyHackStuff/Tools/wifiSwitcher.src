@@ -1,0 +1,33 @@
+// wifiSwitcher.src - An app used for switching between wifi networks.
+// version = 1.0.3
+
+import_code("..\Libs\toffsoftUtils.src")
+
+cog = get_custom_object
+cog.ToffsoftUtils = ToffsoftUtils()
+obfuscationKey = null
+interval = 30
+
+parsedParams = cog.ToffsoftUtils.Common.ParseCommandLineArguments(params, {
+    "-k": "The encryption key to use for data files.",
+    "-i": "The interval in seconds to wait between connection attempts.",
+})
+
+if parsedParams.indexes.indexOf("-k") >= 0 then
+    obfuscationKey = parsedParams["-k"]
+end if
+
+if parsedParams.indexes.indexOf("-i") >= 0 then
+    interval = parsedParams["-i"].to_int
+end if
+
+cog.ToffsoftUtils.Network = Network(obfuscationKey, true)
+
+if cog.ToffsoftUtils.Network == null then
+    exit("Error loading Network library.")
+end if
+
+while true
+    cog.ToffsoftUtils.Network.ConnectToRandomWifiNetwork
+    wait(interval)
+end while

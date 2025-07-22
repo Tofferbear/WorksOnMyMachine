@@ -1,0 +1,137 @@
+// toffsoftCommon.src - A collection of common functions used in toffsoft projects.
+
+COMMON = {}
+Common = function(obfuscationKey = null)
+    self = new COMMON
+    self.Version = "1.1.2"
+    self.ObfuscationKey = "key"
+    self.DataFilePath = current_path + "/data"
+
+    if obfuscationKey != null then self.ObfuscationKey = obfuscationKey
+
+    self.ParseCommandLineArguments = function(params, validKeys)
+        returnParams = {}
+
+        if params.len < 1 then return returnParams
+
+        if params[0] == "-h" or params[0] == "--help" then
+            print("Usage: " + program_path.remove(current_path + "/") + " -<arg1Key> <arg1Value> -<arg2Key> <arg2Value>... -<argNKey> <argNValue>")
+            print("Valid keys:")
+
+            if validKeys != null and validKeys.indexes.len > 0 then
+                for keyIndex in validKeys.indexes
+                    print("    " + keyIndex + ": " + validKeys[keyIndex])
+                end for
+            end if
+
+            return returnParams
+        end if
+
+        if params.len % 2 != 0 then
+            print("Invalid parameters count.  Must be in multiples of 2.")
+            return returnParams
+        end if
+
+        for i in range(0, params.len, 2)
+            if i + 1 >= params.len then break
+            returnParams[params[i]] = params[i + 1]
+        end for
+
+        return returnParams
+    end function
+
+    self.GetRandomNumber = function(min, max)
+        return floor(rnd * (max - min + 1)) + min
+    end function
+
+    self.GetRandomIp = function()
+        octets = []
+
+        for i in range(0, 3)
+            if i == 0 then octets.push(ceil(rnd * 223)) else octets.push(floor(rnd * 256))
+        end for
+
+        return octets.join(".")
+    end function
+
+    self.LoadAptClient = function()
+        aptClient = include_lib(current_path + "/aptclient.so")
+
+        if aptClient == null then print("aptclient.so was not found.  Please place it local to the app.")
+
+        return aptClient
+    end function
+
+    self.GetCurrentDate = function()
+        return slice(current_date, 0, current_date.indexOf(" "))
+    end function
+
+    self.GetCurrentTime = function()
+        return slice(current_date, current_date.indexOf(" - ") + 3, current_date.len)
+    end function
+
+    self.RenderStaticMenuAndGetResponse = function(menuOptions, prompt, menuDescription = "")
+        if (not menuOptions or menuOptions.len == 0) then return
+
+        if menuDescription != "" then
+            line = ""
+
+            for word in menuDescription.split(" ")
+                if (line.len + word.len) > 60 then
+                    print(line)
+                    line = ""
+                end if
+
+                line = line + word + " "
+            end for
+
+            print
+        end if
+
+        for i in range(0, menuOptions.len - 1)
+            print("[" + i + "]: " + menuOptions[i])
+        end for
+
+        print
+
+        if prompt == null or prompt == "" then prompt = "Enter the number of the selection: "
+
+        return user_input(prompt)
+    end function
+
+    self.ObfuscateString = function(input)
+        obfuscatedString = ""
+
+        if input == null or input == "" then return obfuscatedString
+
+        keyIndex = 0
+
+        for i in range(0, input.len - 1)
+            obfuscatedString = obfuscatedString + char(bitAnd(input[i].code * self.ObfuscationKey[keyIndex].code, 65535))
+            keyIndex = keyIndex + 1
+
+            if keyIndex >= self.ObfuscationKey.len then keyIndex = 0
+        end for
+
+        return obfuscatedString
+    end function
+
+    self.UnobfuscateString = function(input)
+        readableString = ""
+
+        if input == null or input == "" then return readableString
+
+        keyIndex = 0
+
+        for i in range(0, input.len - 1)
+            readableString = readableString + char(input[i].code / self.ObfuscationKey[keyIndex].code)
+            keyIndex = keyIndex + 1
+
+            if keyIndex >= self.ObfuscationKey.len then keyIndex = 0
+        end for
+
+        return readableString
+    end function
+
+    return self
+end function
