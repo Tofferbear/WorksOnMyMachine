@@ -9,6 +9,7 @@ Real-time audio visualization, right from your system's sound output. No cables.
 - Renders reactive visuals in-browser using Web Audio API
 - Supports waveform, frequency, and custom visual modes
 - Runs entirely client-side—no recording, no storage
+- This is a work in progress and is still far from being done
 
 ## 🚀 Getting Started
 npm install
