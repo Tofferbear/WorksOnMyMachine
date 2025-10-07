@@ -25,11 +25,9 @@ Explanation:
 - answer[3] = 1×2×3 = 6
 
 ## Constraints
-2 ≤ nums.length ≤ 10⁵
-
--30 ≤ nums[i] ≤ 30
-
-The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer
+- 2 ≤ nums.length ≤ 10⁵
+- -30 ≤ nums[i] ≤ 30
+- The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer
 
 ## Approach
 ### 🧠 Prefix + Postfix Accumulation
