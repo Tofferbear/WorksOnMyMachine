@@ -19,19 +19,36 @@ jobs:
         with:
           submodules: true
           lfs: false
+
+      # 1. NEW: Install .NET 10 on the GitHub Runner
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # 2. NEW: Manually build the Client and API
+      - name: Manual Build
+        run: |
+          dotnet publish SpotifyStuff/Spotoffify/Client/Client.csproj -c Release -o ./publish-client
+          dotnet publish SpotifyStuff/Spotoffify/Api/Api.csproj -c Release -o ./publish-api
+
+      # 3. UPDATED: Deploy the pre-built files
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PURPLE_SKY_067007710 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "SpotifyStuff/Spotoffify/Client" # App source code path
-          api_location: "SpotifyStuff/Spotoffify/Api" # Api source code path - optional
-          output_location: "wwwroot" # Built app content directory - optional
-          ###### End of Repository/Build Configurations ######
+          
+          # We point these to our manual 'publish' folders from Step 2
+          app_location: "./publish-client/wwwroot" 
+          api_location: "./publish-api"
+          output_location: "" # Leave empty when skipping build
+          
+          # Crucial: Tell Azure NOT to try building .NET 10 itself
+          skip_app_build: true
+          skip_api_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -44,3 +61,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PURPLE_SKY_067007710 }}
           action: "close"
+
