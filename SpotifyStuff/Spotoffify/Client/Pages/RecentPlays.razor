@@ -1,0 +1,62 @@
+﻿@page "/"
+@using Spotoffify.Shared
+@inject HttpClient Http
+
+<PageTitle>Spotoffify | Recent Plays</PageTitle>
+
+<div class="header">
+    <h1>Spotoffify</h1>
+    <p>Your latest vibes, tracked by Toffer.</p>
+</div>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <strong>Toffer Error:</strong> @errorMessage
+        <button class="btn btn-link" @onclick="() => errorMessage = null">Try Again</button>
+    </div>
+}
+else if (plays == null)
+{
+    <div class="loader">Loading your tracks...</div>
+}
+else if (!plays.Any())
+{
+    <p>No tracks found. Go listen to some music!</p>
+}
+else
+{
+    <div class="track-grid">
+        @foreach (var play in plays)
+        {
+            <div class="track-card">
+                <img src="@play.AlbumImageUrl" alt="@play.AlbumName" />
+                <div class="track-info">
+                    <span class="track-name">@play.TrackName</span>
+                    <span class="artist-name">@play.ArtistName</span>
+                    <span class="played-at">@play.PlayedAt.ToLocalTime().ToString("g")</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<TrackedPlay>? plays;
+    
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // In SWA, the "api" folder is the entry point for your functions
+            plays = await Http.GetFromJsonAsync<List<TrackedPlay>>("api/GetRecentPlays");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Toffer Error: {ex}"); // This will show in F12 Console
+        }
+    }
+}
