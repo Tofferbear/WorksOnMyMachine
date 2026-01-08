@@ -18,12 +18,11 @@
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-      <None Update="staticwebapp.config.json">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-  </ItemGroup>
-  <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Content Update="staticwebapp.config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
