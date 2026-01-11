@@ -22,7 +22,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
           ###### Repository/Build Configurations - These match your folder structure ######
-          app_location: "Spotoffify/Client" # Points to your Blazor Project
+          app_location: "SpotifyStuff/Spotoffify/Client" # Points to your Blazor Project
           api_location: "" # LEAVE EMPTY! We are using your external Flex Function, not a managed one.
           output_location: "wwwroot" # Where Blazor puts the final files
           ###### End of Repository/Build Configurations ######
