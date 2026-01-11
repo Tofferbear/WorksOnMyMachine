@@ -2,8 +2,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Spotoffify.Shared;
-using System;
-using System.Threading.Tasks;
 
 namespace Spotoffify.Api;
 

@@ -1,62 +1,128 @@
 ﻿@page "/"
 @using Spotoffify.Shared
-@inject HttpClient Http
+@using Spotoffify.Client.Services
+@using ApexCharts
+@inject UiSpotifyService MyService
 
-<PageTitle>Spotoffify | Recent Plays</PageTitle>
+<PageTitle>Spotoffify - Dashboard</PageTitle>
 
-<div class="header">
-    <h1>Spotoffify</h1>
-    <p>Your latest vibes, tracked by Toffer.</p>
-</div>
-
-@if (errorMessage != null)
-{
-    <div class="alert alert-danger">
-        <strong>Toffer Error:</strong> @errorMessage
-        <button class="btn btn-link" @onclick="() => errorMessage = null">Try Again</button>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>🎵 Spotoffify Dashboard</h1>
+        </div>
     </div>
-}
-else if (plays == null)
-{
-    <div class="loader">Loading your tracks...</div>
-}
-else if (!plays.Any())
-{
-    <p>No tracks found. Go listen to some music!</p>
-}
-else
-{
-    <div class="track-grid">
-        @foreach (var play in plays)
-        {
-            <div class="track-card">
-                <img src="@play.AlbumImageUrl" alt="@play.AlbumName" />
-                <div class="track-info">
-                    <span class="track-name">@play.TrackName</span>
-                    <span class="artist-name">@play.ArtistName</span>
-                    <span class="played-at">@play.PlayedAt.ToLocalTime().ToString("g")</span>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-5">
+            <div class="col-md-8 offset-md-2">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-center">🏆 All-Time Top Artists</h3>
+
+                        <ApexChart TItem="ArtistMetrics"
+                                   Title="Your Heavy Hitters"
+                                   Options="chartOptions">
+
+                            <ApexPointSeries TItem="ArtistMetrics"
+                                             Items="artistStats"
+                                             Name="Plays"
+                                             SeriesType="SeriesType.Bar"
+                                             XValue="@(e => e.ArtistName)"
+                                             YValue="@(e => e.PlayCount)"
+                                             Color="#1DB954" />
+                        </ApexChart>
+                    </div>
                 </div>
             </div>
-        }
-    </div>
-}
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <h3>Recent Plays</h3>
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Played At</th>
+                            <th>Track</th>
+                            <th>Artist</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var play in plays)
+                        {
+                            <tr>
+                                <td>@play.PlayedAt.ToLocalTime().ToString("g")</td>
+                                <td>@play.TrackName</td>
+                                <td>@play.ArtistName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private List<TrackedPlay>? plays;
-    
-    private string? errorMessage;
+    private List<TrackedPlay> plays = new();
+    private List<ArtistMetrics> artistStats = new(); // The new List Type
+    private bool isLoading = true;
+    private ApexChartOptions<ArtistMetrics> chartOptions = new(); // The new Options Type
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // In SWA, the "api" folder is the entry point for your functions
-            plays = await Http.GetFromJsonAsync<List<TrackedPlay>>("api/GetRecentPlays");
+            // 1. Get History
+            var historyTask = MyService.GetMyHistory();
+
+            // 2. Get Top 10 All-Time Artists
+            var statsTask = MyService.GetTopArtists(10);
+
+            await Task.WhenAll(historyTask, statsTask);
+
+            plays = historyTask.Result;
+            artistStats = statsTask.Result;
+
+            ConfigureChart();
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
-            Console.WriteLine($"Toffer Error: {ex}"); // This will show in F12 Console
+            Console.WriteLine($"Error: {ex.Message}");
         }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ConfigureChart()
+    {
+        // Dark Mode looks best for music apps
+        chartOptions.Theme = new Theme { Mode = Mode.Dark };
+
+        chartOptions.PlotOptions = new PlotOptions
+        {
+            Bar = new PlotOptionsBar
+            {
+                Horizontal = true // Horizontal bars allow for long Band Names
+            }
+        };
+
+        // Add a nice X-Axis label
+        chartOptions.Xaxis = new XAxis
+        {
+            Labels = new XAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } }
+        };
     }
 }

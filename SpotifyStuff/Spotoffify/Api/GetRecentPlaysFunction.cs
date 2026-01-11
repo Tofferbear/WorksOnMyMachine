@@ -2,9 +2,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Spotoffify.Shared;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Numerics;
 
 namespace Spotoffify.Api;
 

@@ -1,6 +1,7 @@
-using Spotoffify.Client;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Spotoffify.Client;
+using Spotoffify.Client.Services;
 using Spotoffify.Shared;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -23,6 +24,6 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 // Register Services
-builder.Services.AddScoped<SpotifyService>();
+builder.Services.AddScoped<UiSpotifyService>();
 
 await builder.Build().RunAsync();
