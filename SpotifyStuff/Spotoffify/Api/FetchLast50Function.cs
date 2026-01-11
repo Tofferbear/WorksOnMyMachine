@@ -24,7 +24,7 @@ public class FetchLast50Function
 
     // Runs every 30 minutes: "0 */30 * * * *"
     [Function("FetchLast50")]
-    public async Task Run([TimerTrigger("0 */30 * * * *", RunOnStartup = true)] TimerInfo myTimer)
+    public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer)
     {
         _logger.LogInformation($"Spotoffify Fetching started at: {DateTime.Now}");
 
