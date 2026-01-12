@@ -61,5 +61,11 @@ namespace Spotoffify.Client.Services
             return await _http.GetFromJsonAsync<List<TrackMetrics>>($"api/GetTopTracks/{count}")
                    ?? new List<TrackMetrics>();
         }
+
+        public async Task ShuffleMix(string sourceId, string targetId)
+        {
+            // Just send the IDs. The API handles the auth internally.
+            await _http.PostAsJsonAsync("api/ShuffleMix", new { SourcePlaylistId = sourceId, TargetPlaylistId = targetId });
+        }
     }
 }
