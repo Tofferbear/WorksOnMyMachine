@@ -64,6 +64,7 @@ public class SpotifyService
             ArtistName = item.Track.Artists.FirstOrDefault()?.Name ?? "Unknown",
             AlbumName = item.Track.Album.Name,
             AlbumImageUrl = item.Track.Album.Images.FirstOrDefault()?.Url ?? "",
+            DurationMs = item.Track.DurationMs,
             PlayedAt = item.PlayedAt
         }).ToList();
     }
