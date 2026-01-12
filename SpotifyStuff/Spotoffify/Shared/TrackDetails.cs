@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Spotoffify.Shared;
 
@@ -8,7 +9,7 @@ namespace Spotoffify.Shared;
 public record TrackDetails(
     string Id,
     string Name,
-    int DurationMs,
+    [property: JsonPropertyName("duration_ms")] int DurationMs,
     List<Artist> Artists,
     Album Album
 );
