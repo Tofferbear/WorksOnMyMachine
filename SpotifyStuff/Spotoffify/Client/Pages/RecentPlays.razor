@@ -7,6 +7,32 @@
 <PageTitle>Spotoffify - Dashboard</PageTitle>
 
 <div class="container-fluid">
+    <div class="row mb-4 mt-3">
+        <div class="col-md-8 offset-md-2">
+
+            @if (isReforging)
+            {
+                <div class="alert alert-dark text-center shadow-sm" role="alert" style="border-radius:12px; height: 152px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="spinner-border text-success mb-2" role="status"></div>
+                    <div>⚒️ Reforging Tofforgery Tunes...</div>
+                </div>
+            }
+            else
+            {
+                <iframe style="border-radius:12px"
+                        src="@EmbedUrl"
+                        width="100%"
+                        height="152"
+                        frameBorder="0"
+                        allowfullscreen=""
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy">
+                </iframe>
+            }
+
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col text-center">
             <h1>🎵 Spotoffify Dashboard</h1>
@@ -196,6 +222,12 @@
     private ApexChartOptions<TrackMetrics> trackBarOptions = new();
     private ApexChartOptions<HeatmapPoint> heatmapOptions = new();
 
+    // Default to a playlist ID
+    private string sourceId = "6Fgo59DtcjJsJpZ5Xzwpkp";
+    private string targetId = "2asc455TtftwftvbETI4RG";
+    private bool isReforging = true;
+    private long forgeTime = DateTime.UtcNow.Ticks;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -219,6 +251,8 @@
             ProcessHeatmapData(heatmapTask.Result);
 
             ConfigureCharts();
+
+            _ = ReforgeSequence();
         }
         catch (Exception ex)
         {
@@ -296,4 +330,36 @@
             }
         };
     }
+
+    private async Task ReforgeSequence()
+    {
+        // 4. Do the work
+        await ShuffleMyMix();
+
+        await Task.Delay(3000);
+
+        // 5. Update the UI
+        isReforging = false;
+        forgeTime = DateTime.UtcNow.Ticks; // Update timestamp to bust cache
+        StateHasChanged(); // Tell Blazor to re-render only the player section
+    }
+
+    private async Task ShuffleMyMix()
+    {
+        try
+        {
+            await MyService.ShuffleMix(sourceId, targetId);
+            Console.WriteLine("Tofforgery Tunes Reforged! ⚒️");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to shuffle mix: " + ex.Message);
+            // Even if it fails, we should show the player (it will just be the old mix)
+            isReforging = false;
+            StateHasChanged();
+        }
+    }
+
+    // Helper to generate the URL
+    private string EmbedUrl => $"https://open.spotify.com/embed/playlist/{targetId}?utm_source=generator&theme=0&t={forgeTime}";
 }
