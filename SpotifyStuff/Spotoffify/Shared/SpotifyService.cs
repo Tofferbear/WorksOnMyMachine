@@ -68,4 +68,41 @@ public class SpotifyService
             PlayedAt = item.PlayedAt
         }).ToList();
     }
+
+    public async Task<List<string>> GetPlaylistTrackUris(string playlistId, string accessToken)
+    {
+        var uris = new List<string>();
+        // Limit to 100 to keep it fast. If your source is huge, we can paginate later.
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.spotify.com/v1/playlists/{playlistId}/tracks?fields=items(track(uri))");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode) return uris;
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        foreach (var item in json.GetProperty("items").EnumerateArray())
+        {
+            if (item.TryGetProperty("track", out var track) &&
+                track.ValueKind != JsonValueKind.Null &&
+                track.TryGetProperty("uri", out var uri))
+            {
+                uris.Add(uri.GetString());
+            }
+        }
+        return uris;
+    }
+
+    public async Task ReplacePlaylistTracks(string playlistId, List<string> trackUris, string accessToken)
+    {
+        // PUT request replaces all tracks in the playlist
+        var request = new HttpRequestMessage(HttpMethod.Put, $"https://api.spotify.com/v1/playlists/{playlistId}/tracks");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    
+        // Send URIs in the body
+        request.Content = JsonContent.Create(new { uris = trackUris });
+    
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
 }
