@@ -20,6 +20,8 @@ public record TrackedPlay
 
     public string AlbumImageUrl { get; init; } = string.Empty;
 
+    public int DurationMs { get; init; }
+
     [JsonPropertyName("played_at")]
     public DateTime PlayedAt { get; init; }
 

@@ -42,5 +42,24 @@ namespace Spotoffify.Client.Services
                 return new List<ArtistMetrics>();
             }
         }
+
+        public async Task<List<HeatmapPoint>> GetHeatmapData()
+        {
+            // Calls our new API endpoint
+            return await _http.GetFromJsonAsync<List<HeatmapPoint>>("api/GetHeatmapData")
+                   ?? new List<HeatmapPoint>();
+        }
+
+        public async Task<DashboardStats> GetDashboardStats()
+        {
+            return await _http.GetFromJsonAsync<DashboardStats>("api/GetDashboardStats")
+                   ?? new DashboardStats();
+        }
+
+        public async Task<List<TrackMetrics>> GetTopTracks(int count)
+        {
+            return await _http.GetFromJsonAsync<List<TrackMetrics>>($"api/GetTopTracks/{count}")
+                   ?? new List<TrackMetrics>();
+        }
     }
 }
