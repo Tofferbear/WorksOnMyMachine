@@ -1,0 +1,68 @@
+﻿@page "/heatmap"
+@using Spotoffify.Shared
+@using Spotoffify.Client.Services
+@inject UiSpotifyService MyService
+
+<PageTitle>Listening Habits</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">🔥 Listening Habits</h2>
+
+            <div class="card shadow-sm p-3 mb-4">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Analyzing your schedule...</p>
+                    </div>
+                }
+                else
+                {
+                    <ApexChart TItem="HeatmapPoint"
+                               Title="Weekly Listening Intensity"
+                               Options="options">
+
+                        @foreach (var dayGroup in heatmapData.OrderByDescending(x => x.DayId).GroupBy(x => x.DayName))
+                        {
+                            <ApexPointSeries TItem="HeatmapPoint"
+                                             Items="dayGroup.OrderBy(x => x.HourId).ToList()"
+                                             Name="@dayGroup.Key"
+                                             SeriesType="SeriesType.Heatmap"
+                                             XValue="@(e => e.HourId)"
+                                             YValue="@(e => e.PlayCount)" />
+                        }
+
+                    </ApexChart>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private List<HeatmapPoint> heatmapData = new();
+    private ApexChartOptions<HeatmapPoint> options = new(); // Your existing options logic
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Call the API
+            heatmapData = await MyService.GetHeatmapData();
+
+            // Setup your options (Theme, Colors, etc) here
+            // ...
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
