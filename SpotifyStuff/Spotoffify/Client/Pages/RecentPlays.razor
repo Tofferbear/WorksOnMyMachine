@@ -8,26 +8,26 @@
 
 <div class="container-fluid">
     <div class="row mb-4 mt-3">
-        <div class="col-md-8 offset-md-2">
+        <div class="col-md-8 offset-md-2 text-center">
 
             @if (isReforging)
             {
-                <div class="alert alert-dark text-center shadow-sm" role="alert" style="border-radius:12px; height: 152px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <div class="spinner-border text-success mb-2" role="status"></div>
-                    <div>⚒️ Reforging Tofforgery Tunes...</div>
+                <div class="alert alert-dark shadow-sm d-flex align-items-center justify-content-center" style="border-radius:12px; height: 80px;">
+                    <span class="spinner-border text-success me-3" role="status"></span>
+                    <span>⚒️ Reforging Tofforgery Tunes...</span>
                 </div>
             }
             else
             {
-                <iframe style="border-radius:12px"
-                        src="@EmbedUrl"
-                        width="100%"
-                        height="152"
-                        frameBorder="0"
-                        allowfullscreen=""
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy">
-                </iframe>
+                <div class="p-4 bg-light border rounded-3 shadow-sm">
+                    <h4 class="mb-3">Tofforgery Tunes Ready</h4>
+                    <a href="spotify:playlist:@targetId" class="btn btn-success btn-lg px-4 gap-2">
+                        <i class="bi bi-spotify"></i> Launch in Spotify App
+                    </a>
+                    <div class="text-muted mt-2 small">
+                        (Opens on your PC, Mobile, or Fire TV if installed)
+                    </div>
+                </div>
             }
 
         </div>
@@ -49,19 +49,7 @@
     }
     else
     {
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card text-white bg-primary mb-3 shadow-sm h-100">
-                    <div class="card-header">Total Commitment</div>
-                    <div class="card-body text-center">
-                        <h1 class="display-4 fw-bold">@stats.TotalMinutesListened.ToString("N0")</h1>
-                        <p class="card-text">Minutes Listened</p>
-                        <hr />
-                        <h5 class="opacity-75">@stats.TotalPlays Tracks Played</h5>
-                    </div>
-                </div>
-            </div>
-
+        <div class="row mb-4 g-3">
             <div class="col-md-4">
                 <div class="card bg-dark text-white mb-3 shadow-sm h-100" style="border: 1px solid #333;">
                     <div class="card-header text-success">
@@ -77,6 +65,34 @@
                                 <span class="badge bg-secondary">@((stats.LongestTrack.DurationMs / 60000.0).ToString("0.0")) min</span>
                             </div>
                         }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-white bg-primary mb-3 shadow-sm h-100">
+                    <div class="card-header">Total Commitment</div>
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+
+                        <h1 class="display-5 fw-bold mb-0">
+                            @FormatCommitment(stats.TotalMinutesListened)
+                        </h1>
+
+                        <p class="card-text text-white-50 small mb-3">Time Spent Listening</p>
+
+                        <div class="border-top border-white border-opacity-25 pt-3 w-100">
+                            <div class="row">
+                                <div class="col-6 border-end border-white border-opacity-25">
+                                    <h5 class="mb-0">@stats.TotalPlays.ToString("N0")</h5>
+                                    <small class="text-white-50">Tracks</small>
+                                </div>
+                                <div class="col-6">
+                                    <h5 class="mb-0">@stats.TotalMinutesListened.ToString("N0")</h5>
+                                    <small class="text-white-50">Minutes</small>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -101,102 +117,86 @@
             </div>
         </div>
 
-        <div class="row mb-5">
-            <div class="col-md-10 offset-md-1">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h3 class="card-title">🏆 All-Time Top Artists</h3>
-                        <ApexChart TItem="ArtistMetrics"
-                                   Options="artistBarOptions"
-                                   Height="350">
-                            <ApexPointSeries TItem="ArtistMetrics"
-                                             Items="artistStats"
-                                             Name="Plays"
-                                             SeriesType="SeriesType.Bar"
-                                             XValue="@(e => e.ArtistName)"
-                                             YValue="@(e => e.PlayCount)"
-                                             Color="#1DB954" />
-                        </ApexChart>
-                    </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white p-3" role="button" @onclick="() => showCharts = !showCharts">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-primary">
+                        <i class="bi bi-bar-chart-line me-2"></i>All-Time Charts
+                    </h5>
+                    <i class="bi @(showCharts ? "bi-chevron-up" : "bi-chevron-down") text-muted"></i>
                 </div>
             </div>
-        </div>
 
-        <div class="row mb-5">
-            <div class="col-md-10 offset-md-1">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h3 class="card-title">💿 All-Time Top Tracks</h3>
-                        <ApexChart TItem="TrackMetrics"
-                                   Options="trackBarOptions"
-                                   Height="350">
-                            <ApexPointSeries TItem="TrackMetrics"
-                                             Items="trackStats"
-                                             Name="Plays"
-                                             SeriesType="SeriesType.Bar"
-                                             XValue="@(e => e.Label)"
-                                             YValue="@(e => e.PlayCount)"
-                                             Color="#1DB954" />
-                        </ApexChart>
-                    </div>
-                </div>
-            </div>
-        </div>
+            @if (showCharts)
+            {
+                <div class="card-body animate__animated animate__fadeIn">
+                    <div class="row g-4">
 
-        <div class="row mb-5">
-            <div class="col-md-10 offset-md-1">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h3 class="card-title">🔥 Listening Habits (UTC)</h3>
-                        <p class="text-muted small">Darker = More Music</p>
-                        <ApexChart TItem="HeatmapPoint"
-                                   Options="heatmapOptions"
-                                   Height="400">
-                            @foreach (var daySeries in heatmapData)
-                            {
-                                <ApexPointSeries TItem="HeatmapPoint"
-                                                 Items="daySeries.Value"
-                                                 Name="@daySeries.Key"
-                                                 SeriesType="SeriesType.Heatmap"
-                                                 XValue="@(e => e.HourOfDay.ToString("00") + ":00")"
-                                                 YValue="@(e => e.PlayCount)" />
-                            }
-                        </ApexChart>
+                        <div class="col-md-6">
+                            <h6 class="text-center text-muted mb-3">Top Artists</h6>
+                            <ApexChart TItem="ArtistMetrics"
+                                       Options="artistBarOptions"
+                                       Height="350">
+                                <ApexPointSeries TItem="ArtistMetrics"
+                                                 Items="artistStats"
+                                                 Name="Plays"
+                                                 SeriesType="SeriesType.Bar"
+                                                 XValue="@(e => e.ArtistName)"
+                                                 YValue="@(e => e.PlayCount)"
+                                                 Color="#1DB954" />
+                            </ApexChart>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-center text-muted mb-3">Top Tracks</h6>
+                            <ApexChart TItem="TrackMetrics"
+                                       Options="trackBarOptions"
+                                       Height="350">
+                                <ApexPointSeries TItem="TrackMetrics"
+                                                 Items="trackStats"
+                                                 Name="Plays"
+                                                 SeriesType="SeriesType.Bar"
+                                                 XValue="@(e => e.Label)"
+                                                 YValue="@(e => e.PlayCount)"
+                                                 Color="#1DB954" />
+                            </ApexChart>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
 
         <div class="row mb-5">
             <div class="col-md-10 offset-md-1">
                 <h3>Recent Plays</h3>
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover table-dark">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">Art</th>
-                                <th>Played At</th>
-                                <th>Track</th>
-                                <th>Artist</th>
+                                <th style="min-width: 300px;">Track</th>
+                                <th class="d-none d-md-table-cell">Played At</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var play in plays)
                             {
                                 <tr>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(play.AlbumImageUrl))
-                                        {
-                                            <img src="@play.AlbumImageUrl" alt="Art" class="img-fluid rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover;" />
-                                        }
-                                        else
-                                        {
-                                            <div style="width:50px; height:50px; background-color:#333;" class="rounded d-flex align-items-center justify-content-center">🎵</div>
-                                        }
+                                    <td style="padding: 4px 8px;">
+                                        <iframe style="border-radius:12px"
+                                                src="@($"https://open.spotify.com/embed/track/{play.TrackId}?utm_source=generator&theme=0")"
+                                                width="100%"
+                                                height="80"
+                                                frameBorder="0"
+                                                allowfullscreen=""
+                                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                                loading="lazy"
+                                                scrolling="no">
+                                        </iframe>
                                     </td>
-                                    <td>@play.PlayedAt.ToLocalTime().ToString("g")</td>
-                                    <td>@play.TrackName</td>
-                                    <td>@play.ArtistName</td>
+
+                                    <td class="d-none d-md-table-cell text-muted">
+                                        @play.PlayedAt.ToLocalTime().ToString("g")
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -228,11 +228,12 @@
     private bool isReforging = true;
     private long forgeTime = DateTime.UtcNow.Ticks;
 
+    private bool showCharts = true;
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // 1. Kick off 4 requests in parallel!
             var statsTask = MyService.GetDashboardStats();
             var topArtistsTask = MyService.GetTopArtists(10);
             var topTracksTask = MyService.GetTopTracks(10);
@@ -241,14 +242,10 @@
 
             await Task.WhenAll(statsTask, topArtistsTask, topTracksTask, heatmapTask, historyTask);
 
-            // 2. Assign results
             stats = statsTask.Result;
             artistStats = topArtistsTask.Result;
             trackStats = topTracksTask.Result;
             plays = historyTask.Result;
-
-            // 3. Process Heatmap
-            ProcessHeatmapData(heatmapTask.Result);
 
             ConfigureCharts();
 
@@ -264,29 +261,6 @@
         }
     }
 
-    private void ProcessHeatmapData(List<HeatmapPoint> rawPoints)
-    {
-        string[] days = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        heatmapData = new Dictionary<string, List<HeatmapPoint>>();
-
-        for (int d = 6; d >= 0; d--)
-        {
-            var dayName = days[d];
-            var dayPoints = new List<HeatmapPoint>();
-            for (int h = 0; h < 24; h++)
-            {
-                var existing = rawPoints.FirstOrDefault(p => p.DayOfWeek == d && p.HourOfDay == h);
-                dayPoints.Add(new HeatmapPoint
-                {
-                    DayOfWeek = d,
-                    HourOfDay = h,
-                    PlayCount = existing?.PlayCount ?? 0
-                });
-            }
-            heatmapData.Add(dayName, dayPoints);
-        }
-    }
-
     private void ConfigureCharts()
     {
         var theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 };
@@ -294,39 +268,35 @@
         // Bar Chart
         artistBarOptions.Theme = theme;
         artistBarOptions.PlotOptions = new PlotOptions { Bar = new PlotOptionsBar { Horizontal = true } };
-        artistBarOptions.Xaxis = new XAxis { Labels = new XAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } } };
         artistBarOptions.Yaxis = new List<YAxis> { new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } } } };
+
+        artistBarOptions.Xaxis = new XAxis
+        {
+            DecimalsInFloat = 0,
+            Labels = new XAxisLabels
+            {
+                Style = new AxisLabelStyle
+                {
+                    Colors = "#fff"
+                },
+                Formatter = @"function(val) { return Number(val).toFixed(0); }"
+            }
+        };
 
         trackBarOptions.Theme = theme;
         trackBarOptions.PlotOptions = new PlotOptions { Bar = new PlotOptionsBar { Horizontal = true } };
-        trackBarOptions.Xaxis = new XAxis { Labels = new XAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } } };
         trackBarOptions.Yaxis = new List<YAxis> { new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } } } };
 
-        // Heatmap
-        heatmapOptions.Theme = theme;
-        heatmapOptions.Xaxis = new XAxis
+        trackBarOptions.Xaxis = new XAxis
         {
-            Tooltip = new XAxisTooltip { Enabled = false },
-            Labels = new XAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } }
-        };
-        heatmapOptions.Yaxis = new List<YAxis> { new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { Colors = "#fff" } } } };
-
-        heatmapOptions.PlotOptions = new PlotOptions
-        {
-            Heatmap = new PlotOptionsHeatmap
+            DecimalsInFloat = 0,
+            Labels = new XAxisLabels
             {
-                Radius = 2,
-                EnableShades = true,
-                ColorScale = new PlotOptionsHeatmapColorScale
+                Style = new AxisLabelStyle
                 {
-                    Ranges = new()
-                    {
-                        new() { From = 0, To = 0, Color = "#121212", Name = "Silent" },
-                        new() { From = 1, To = 5, Color = "#0e4d22", Name = "Low" },
-                        new() { From = 6, To = 20, Color = "#1DB954", Name = "Medium" },
-                        new() { From = 21, To = 500, Color = "#1ed760", Name = "High" }
-                    }
-                }
+                    Colors = "#fff"
+                },
+                Formatter = @"function(val) { return Number(val).toFixed(0); }"
             }
         };
     }
@@ -358,6 +328,20 @@
             isReforging = false;
             StateHasChanged();
         }
+    }
+
+    private string FormatCommitment(double totalMinutes)
+    {
+        var span = TimeSpan.FromMinutes(totalMinutes);
+        var components = new List<string>();
+
+        if (span.Days > 365) components.Add($"{span.Days / 365}y");
+        if (span.Days > 0) components.Add($"{span.Days % 365}d");
+        if (span.Hours > 0) components.Add($"{span.Hours}h");
+        if (span.Minutes > 0) components.Add($"{span.Minutes}m");
+
+        // Join them with spaces (e.g., "3d 4h 20m")
+        return string.Join(" ", components);
     }
 
     // Helper to generate the URL
