@@ -1,0 +1,14 @@
+{
+  "pserver": {
+    "email": "",
+    "password": "",
+    "protocol": "http",
+    "hostname": "",
+    "port": 21025,
+    "path": "/",
+    "branch": "default"
+  },
+  "local": {
+    "localPath": ""
+  }
+}
